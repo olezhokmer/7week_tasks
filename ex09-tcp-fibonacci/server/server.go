@@ -4,40 +4,45 @@ import (
 	"encoding/json"
 	"math/big"
 	"net"
+
+	"calc/models"
 )
 
-func main() {
-	ln, _ := net.Listen("tcp", "127.0.0.1:3000")
-	c, _ := ln.Accept()
-	var str string
-	for {
-		json.NewDecoder(c).Decode(&str)
-		n := new(big.Int)
-		n, _ = n.SetString(str, 10)
+var cache = make(map[int]*big.Int)
 
-		fib := fibonacci(n)
-		json.NewEncoder(c).Encode("1ms " + fib.String() + "\n")
+func fibonacci(n int) *big.Int {
+	if cache[n] != nil {
+		return cache[n]
 	}
-}
-
-func fibonacci(n *big.Int) *big.Int {
 	f2 := big.NewInt(0)
 	f1 := big.NewInt(1)
 
-	if n.Cmp(big.NewInt(1)) == 0 {
+	if n == 1 {
 		return f2
 	}
 
-	if n.Cmp(big.NewInt(2)) == 0 {
+	if n == 2 {
 		return f1
 	}
 
-	for i := 3; n.Cmp(big.NewInt(int64(i))) >= 0; i++ {
+	for i := 3; i <= n+1; i++ {
 		next := big.NewInt(0)
 		next.Add(f2, f1)
 		f2 = f1
 		f1 = next
 	}
-
+	cache[n] = f1
 	return f1
+}
+
+func main() {
+	l, _ := net.Listen("tcp", "127.0.0.1:3000")
+	c, _ := l.Accept()
+	var n int
+	for {
+		json.NewDecoder(c).Decode(&n)
+		res := fibonacci(n)
+		data := models.NewFib(res)
+		json.NewEncoder(c).Encode(data)
+	}
 }
